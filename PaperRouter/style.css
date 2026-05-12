@@ -1,0 +1,9 @@
+/* 行样式：设置为红色 */
+.row {
+	color: red;
+}
+
+/* 当窗口启用绿色模式时，行样式改为绿色 */
+window[data-green-instead] .row {
+	color: green;
+}

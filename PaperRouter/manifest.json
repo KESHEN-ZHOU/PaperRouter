@@ -1,0 +1,19 @@
+{
+    "manifest_version": 2,
+    "name": "PaperRouter",
+    "version": "3.0.6",
+    "description": "Smart Zotero collection router — classify papers into collections with LLM + embedding providers",
+    "homepage_url": "https://github.com/KESHEN-ZHOU/PaperRouter",
+    "applications": {
+        "zotero": {
+            "id": "paperrouter@keshen-zhou.github.io",
+            "strict_min_version": "7.0",
+            "strict_max_version": "9.*"
+        }
+    },
+    "icons": {
+        "48": "icons/icon-48.png",
+        "96": "icons/icon-96.png",
+        "128": "icons/icon-128.png"
+    }
+}

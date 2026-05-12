@@ -1,0 +1,37 @@
+{
+  "name": "paperrouter",
+  "version": "0.0.1",
+  "description": "Smart Zotero collection routing — classify papers into the right collections using embedding similarity or LLM zero-shot.",
+  "homepage": "https://github.com/KESHEN-ZHOU/PaperRouter",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KESHEN-ZHOU/PaperRouter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KESHEN-ZHOU/PaperRouter/issues"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "test:verbose": "jest --verbose",
+    "build": "./scripts/build-xpi.sh"
+  },
+  "keywords": [
+    "zotero",
+    "zotero-plugin",
+    "classification",
+    "embedding",
+    "llm"
+  ],
+  "license": "MPL-2.0",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.11"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "private": true
+}

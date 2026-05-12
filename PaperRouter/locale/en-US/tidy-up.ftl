@@ -1,0 +1,3 @@
+# 右键菜单：发送到分类
+tidy-up-send-to-collections =
+    .label = Send to Collections...

@@ -1,0 +1,1182 @@
+<?xml version="1.0"?>
+<!--
+  This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+  PaperRouter — Smart Zotero collection router
+  Copyright (c) Mike Zhou (Keshen Zhou)
+  Copyright (c) Wight
+  2026 PaperRouter rewrite based on the original Tidy Up plugin.
+-->
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<?xml-stylesheet href="chrome://zotero/skin/zotero.css" type="text/css"?>
+<window
+    xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+    xmlns:html="http://www.w3.org/1999/xhtml"
+    id="tidy-up-collections-dialog"
+    title=""
+    persist="screenX screenY width height"
+    width="550"
+    height="780"
+    minwidth="450"
+    minheight="600"
+    windowtype="tidy-up:collections-dialog"
+    onload="onLoad();">
+    <script type="application/javascript" src="chrome://tidy-up-trae/content/l10n.js"/>
+    <script><![CDATA[
+        function _s(key, params) { return typeof TidyUpL10n !== 'undefined' ? TidyUpL10n.getString(key, params || {}) : key; }
+        // If opener passes language, force use to keep dialog consistent with preferences
+        if (window.arguments && window.arguments[0] && window.arguments[0].language && typeof TidyUpL10n !== 'undefined') {
+            TidyUpL10n.setForcedLanguage(window.arguments[0].language);
+        }
+        function getRouterObject() {
+            try {
+                if (typeof PaperRouter !== 'undefined' && PaperRouter) return PaperRouter;
+            } catch (e) {}
+            try {
+                if (typeof TidyUp !== 'undefined' && TidyUp) return TidyUp;
+            } catch (e) {}
+            try {
+                if (typeof Zotero !== 'undefined') {
+                    if (Zotero.PaperRouter) return Zotero.PaperRouter;
+                    if (Zotero.TidyUp) return Zotero.TidyUp;
+                }
+            } catch (e) {}
+            try {
+                if (window.opener && window.opener.Zotero) {
+                    return window.opener.Zotero.PaperRouter || window.opener.Zotero.TidyUp || null;
+                }
+            } catch (e) {}
+            return null;
+        }
+        var nodeIdCounter = 0;
+        var blacklistChanges = [];  // Track blacklist changes
+        var currentBlacklist = [];  // Current blacklist
+        var existingCollections = [];  // Collection IDs the Item already belongs to
+        var savedItemName = '';  // Save Item name for Retry
+        var savedItemId = null;  // Save Item ID for Retry
+        var maxCollectionNum = 4;  // Max Collection count per Item
+        var allowedCollectionNum = 4;  // Allowed count for newly recommended Collections
+        var recommendedCount = 0;  // Currently recommended Collection count
+        var recommendedInternalCount = 0;  // Currently recommended internal-type Collection count
+        var recommendedExternalCount = 0;  // Currently recommended external-type Collection count
+        var allNodes = [];  // Store all nodes for diversity control
+        
+        function onLoad() {
+            document.documentElement.setAttribute('title', _s('dialog-title'));
+            var setVal = function(id, key) { var e = document.getElementById(id); if (e) e.setAttribute('value', _s(key)); };
+            var setLbl = function(id, key) { var e = document.getElementById(id); if (e) e.setAttribute('label', _s(key)); };
+            var setPh = function(id, key) { var e = document.getElementById(id); if (e) e.setAttribute('placeholder', _s(key)); };
+            setVal('dialog-select-prompt', 'dialog-select-prompt');
+            setLbl('btn-select-all', 'dialog-select-all'); setLbl('btn-deselect-all', 'dialog-deselect-all');
+            setLbl('btn-expand-all', 'dialog-expand-all'); setLbl('btn-collapse-all', 'dialog-collapse-all');
+            setLbl('send-btn', 'dialog-retry');
+            setVal('dialog-threshold-label', 'dialog-threshold');
+            setLbl('cb-hide-zero', 'dialog-hide-zero');
+            setVal('dialog-legend-existing-label', 'dialog-legend-existing');
+            setVal('dialog-legend-blacklisted-label', 'dialog-legend-blacklisted');
+            setVal('dialog-search-label', 'dialog-search-label'); setPh('search-input', 'dialog-search-placeholder');
+            setLbl('btn-search', 'dialog-search-btn'); setLbl('btn-clear-search', 'dialog-clear-btn');
+            setVal('dialog-tips-label', 'dialog-tips');
+            var okBtn = document.getElementById('ok-btn'); if (okBtn) okBtn.setAttribute('label', _s('dialog-ok'));
+            var cancelBtn = document.querySelector('button[oncommand="onCancel();"]'); if (cancelBtn) cancelBtn.setAttribute('label', _s('dialog-cancel'));
+            var container = document.getElementById('collections-container');
+            
+            if (!window.arguments || !window.arguments[0]) {
+                var errLabel = document.createXULElement('label');
+                errLabel.setAttribute('value', _s('dialog-error-no-args'));
+                container.appendChild(errLabel);
+                return;
+            }
+            
+            var args = window.arguments[0];
+            var collections = args.collections;
+            var itemName = args.itemName;
+            currentBlacklist = args.blacklist || [];  // Load blacklist
+            existingCollections = args.existingCollections || [];  // Load existing Collections
+            savedItemName = itemName || '';  // Save for Retry
+            savedItemId = args.itemId || null;  // Save for Retry
+            maxCollectionNum = args.maxCollectionNum || 4;  // Load Collection limit
+            
+            // Calculate allowed count for newly recommended Collections
+            allowedCollectionNum = maxCollectionNum - existingCollections.length;
+            if (allowedCollectionNum < 0) allowedCollectionNum = 0;
+            
+            // Show item name if provided (from context menu)
+            if (itemName) {
+                var itemLabel = document.createXULElement('label');
+                itemLabel.setAttribute('value', _s('dialog-selected-item'));
+                itemLabel.style.fontWeight = 'bold';
+                container.appendChild(itemLabel);
+                
+                var itemValue = document.createXULElement('description');
+                itemValue.textContent = itemName;
+                itemValue.style.fontWeight = 'bold';
+                itemValue.style.fontSize = '150%';
+                itemValue.style.marginBottom = '10px';
+                itemValue.style.wordWrap = 'break-word';
+                itemValue.style.whiteSpace = 'pre-wrap';
+                container.appendChild(itemValue);
+                
+                var separator = document.createXULElement('menuseparator');
+                container.appendChild(separator);
+            }
+            
+            if (!collections || collections.length === 0) {
+                var errLabel = document.createXULElement('label');
+                errLabel.setAttribute('value', _s('dialog-no-collections'));
+                container.appendChild(errLabel);
+                updateSendButton();
+                return;
+            }
+            
+            // Build tree structure
+            var treeContainer = document.createXULElement('vbox');
+            treeContainer.id = 'tree-container';
+            treeContainer.style.overflow = 'auto';
+            treeContainer.flex = '1';
+            treeContainer.style.minHeight = '450px';
+            
+            buildTreeNodes(collections, treeContainer, 0);
+            container.appendChild(treeContainer);
+            
+            // Calculate initial threshold (5th highest confidence)
+            var initialThreshold = calculateInitialThreshold(5);
+            var thresholdInput = document.getElementById('threshold-input');
+            thresholdInput.value = initialThreshold.toFixed(4);
+            
+            // Apply threshold
+            applyThreshold();
+            
+            // Apply diversity control (priority 2: multi-label classification diversity)
+            applyDiversityControl();
+            
+            // Update Tips message (after DOM is fully loaded)
+            updateTipsMessage();
+        }
+        
+        // Check if Collection is blacklisted
+        function isBlacklisted(collectionId) {
+            var id = parseInt(collectionId, 10);
+            return currentBlacklist.indexOf(id) !== -1;
+        }
+        
+        // Check if Collection is one the Item already belongs to
+		function isExistingCollection(collectionId) {
+			var id = parseInt(collectionId, 10);
+			return existingCollections.indexOf(id) !== -1;
+		}
+		
+		// Get Collection type (external vs internal)
+		async function getCollectionType(collectionId) {
+			var router = getRouterObject();
+			if (!router || !router.classifyCollectionType) {
+				return 'default';
+			}
+			
+			try {
+				let collection = await Zotero.Collections.getAsync(collectionId);
+				if (!collection) return 'default';
+				
+				let name = collection.name;
+				let description = collection.description || '';
+				
+				// Get items in Collection (for TELEClass algorithm)
+				let items = [];
+				try {
+					items = await collection.getChildItems();
+					// Only get titles of first 3 items
+					items = items.slice(0, 3).map(item => ({
+						title: item.getField('title') || ''
+					}));
+				} catch (e) {
+					// If failed to get items, continue with other info
+				}
+				
+				return await router.classifyCollectionType(name, description, items);
+			} catch (e) {
+				return 'default';
+			}
+		}
+        
+        // Update Tips message
+        function updateTipsMessage() {
+            var tipsLabel = document.getElementById('tips-message');
+            if (!tipsLabel) return;
+            
+            var existingCount = existingCollections.length;
+            var message = '';
+            
+            if (existingCount >= maxCollectionNum) {
+                message = _s('dialog-tip-limit-reached', { max: maxCollectionNum });
+                tipsLabel.style.color = '#c62828';
+            } else if (existingCount > 0) {
+                message = _s('dialog-tip-has-existing', { existing: existingCount, allowed: allowedCollectionNum });
+                tipsLabel.style.color = '#333';
+            } else {
+                message = _s('dialog-tip-max-select', { max: maxCollectionNum });
+                tipsLabel.style.color = '#333';
+            }
+            
+            tipsLabel.setAttribute('value', message);
+        }
+        
+        // Check if Collection limit has been reached
+        // Returns true if limit reached, no more Collections can be selected
+        function hasReachedCollectionLimit() {
+            // Count of Collections Item already belongs to
+            var existingCount = existingCollections.length;
+            // Count of newly selected Collections (excluding existing)
+            var newSelectedCount = getNewSelectedCount();
+            
+            return (existingCount + newSelectedCount) >= maxCollectionNum;
+        }
+        
+        // Get count of newly selected Collections (excluding existing)
+        function getNewSelectedCount() {
+            var checkboxes = document.querySelectorAll('#tree-container checkbox[data-collection-key]');
+            var count = 0;
+            
+            for (var i = 0; i < checkboxes.length; i++) {
+                var checkbox = checkboxes[i];
+                var collectionId = parseInt(checkbox.getAttribute('data-collection-id'), 10);
+                
+                // Only count newly selected (not existing, not blacklisted)
+                if (checkbox.checked && !isExistingCollection(collectionId)) {
+                    count++;
+                }
+            }
+            
+            return count;
+        }
+        
+        // Check if a Collection can be selected
+        // collectionId: Collection ID to check
+        // Returns true if selectable
+        function canSelectCollection(collectionId) {
+            // Existing Collections can always be checked/unchecked
+            if (isExistingCollection(collectionId)) {
+                return true;
+            }
+            
+            // Check if limit reached
+            return !hasReachedCollectionLimit();
+        }
+        
+        // Set blacklist style for checkbox
+        function setBlacklistStyle(checkbox, isBlacklisted) {
+            if (isBlacklisted) {
+                checkbox.style.color = '#808080';  // Gray
+                checkbox.style.textDecoration = 'line-through';
+                checkbox.setAttribute('data-blacklisted', 'true');
+            } else {
+                checkbox.style.color = '';
+                checkbox.style.textDecoration = '';
+                checkbox.setAttribute('data-blacklisted', 'false');
+            }
+        }
+        
+        // Set existing style for checkbox (medium violet red, bold)
+        function setExistingStyle(checkbox, isExisting) {
+            if (isExisting) {
+                checkbox.style.color = '#C71585';  // Medium violet red (MediumVioletRed)
+                checkbox.style.fontWeight = 'bold';
+                checkbox.setAttribute('data-existing', 'true');
+            } else {
+                checkbox.style.fontWeight = '';
+                checkbox.setAttribute('data-existing', 'false');
+                // If not blacklisted, restore color
+                if (checkbox.getAttribute('data-blacklisted') !== 'true') {
+                    checkbox.style.color = '';
+                }
+            }
+        }
+        
+        // Collect confidence values of all nodes (excluding blacklisted Collections)
+        function collectAllConfidences(nodes, confidences) {
+            for (var i = 0; i < nodes.length; i++) {
+                var node = nodes[i];
+                if (node.confidence !== undefined && !isBlacklisted(node.id)) {
+                    confidences.push(node.confidence);
+                }
+                if (node.children && node.children.length > 0) {
+                    collectAllConfidences(node.children, confidences);
+                }
+            }
+        }
+        
+        // Calculate initial threshold (Nth highest confidence, but not below minimum)
+        function calculateInitialThreshold(topN) {
+            var args = window.arguments[0];
+            var collections = args.collections;
+            var minThreshold = 0.7;  // Minimum threshold to avoid recommending low-similarity Collections
+            
+            if (!collections || collections.length === 0) {
+                return minThreshold;
+            }
+            
+            // Collect all confidence values (excluding blacklist)
+            var allConfidences = [];
+            collectAllConfidences(collections, allConfidences);
+            
+            if (allConfidences.length === 0) {
+                return minThreshold;
+            }
+            
+            // Sort descending
+            allConfidences.sort(function(a, b) { return b - a; });
+            
+            // Get the topN-th value
+            var index = Math.min(topN - 1, allConfidences.length - 1);
+            var topNValue = allConfidences[index];
+            
+            // Return the greater of topN value and minimum threshold
+            return Math.max(topNValue, minThreshold);
+        }
+        
+        function buildTreeNodes(nodes, container, level) {
+            for (var i = 0; i < nodes.length; i++) {
+                var node = nodes[i];
+                var name = node.name || 'Unnamed';
+                var confidence = node.confidence || 0;
+                var confStr = confidence.toFixed(4);
+                var hasChildren = node.children && node.children.length > 0;
+                
+                // Check if blacklisted
+                var blacklisted = isBlacklisted(node.id);
+                // Check if existing Collection
+                var isExisting = isExistingCollection(node.id);
+                
+                // Generate unique ID for this node
+                var nodeId = 'node-' + nodeIdCounter++;
+                
+                // Collect node info (for diversity control)
+                allNodes.push({
+                    nodeId: nodeId,
+                    node: node,
+                    blacklisted: blacklisted,
+                    isExisting: isExisting,
+                    confidence: confidence
+                });
+                
+                // Create node container (holds row + children)
+                var nodeContainer = document.createXULElement('vbox');
+                nodeContainer.id = nodeId + '-container';
+                nodeContainer.setAttribute('data-level', level);
+                
+                // Create row with indent
+                var row = document.createXULElement('hbox');
+                row.id = nodeId + '-row';
+                row.setAttribute('align', 'center');
+                row.style.marginBottom = '4px';
+                row.style.paddingTop = '1px';
+                row.style.paddingBottom = '1px';
+                row.style.marginLeft = (level * 20) + 'px';
+                
+                // Expand/collapse button for nodes with children
+                if (hasChildren) {
+                    var toggleBtn = document.createXULElement('button');
+                    toggleBtn.id = nodeId + '-toggle';
+                    toggleBtn.setAttribute('label', '-');
+                    toggleBtn.style.width = '24px';
+                    toggleBtn.style.minWidth = '24px';
+                    toggleBtn.style.padding = '0';
+                    toggleBtn.style.marginRight = '4px';
+                    toggleBtn.setAttribute('data-expanded', 'true');
+                    toggleBtn.setAttribute('data-node-id', nodeId);
+                    toggleBtn.addEventListener('command', function(e) {
+                        toggleNode(e.target.getAttribute('data-node-id'));
+                    });
+                    row.appendChild(toggleBtn);
+                } else {
+                    // Spacer for leaf nodes
+                    var spacer = document.createXULElement('spacer');
+                    spacer.style.width = '28px';
+                    row.appendChild(spacer);
+                }
+                
+                // Checkbox
+                var checkbox = document.createXULElement('checkbox');
+                checkbox.id = nodeId + '-checkbox';
+                checkbox.setAttribute('label', name);
+                checkbox.setAttribute('title', name);  // hover shows full name when truncated
+                checkbox.style.maxWidth = '360px';
+                checkbox.style.overflow = 'hidden';
+                checkbox.style.textOverflow = 'ellipsis';
+                checkbox.setAttribute('data-collection-key', node.key || '');
+                checkbox.setAttribute('data-collection-id', node.id || '');
+                checkbox.setAttribute('data-confidence', confStr);
+                
+                // Initialize checkbox state (defer until diversity control)
+                checkbox.checked = false;
+                
+                checkbox.flex = '1';
+                
+                // Apply style: blacklist first, else existing style
+                if (blacklisted) {
+                    setBlacklistStyle(checkbox, true);
+                } else if (isExisting) {
+                    setExistingStyle(checkbox, true);
+                }
+                
+                // Add checkbox event handler
+                checkbox.addEventListener('command', onCheckboxChange);
+                
+                row.appendChild(checkbox);
+                
+                // Collection type label
+                var typeLabel = document.createXULElement('label');
+                typeLabel.id = nodeId + '-type';
+                typeLabel.setAttribute('value', '');
+                typeLabel.style.marginLeft = '5px';
+                typeLabel.style.fontSize = '10px';
+                typeLabel.style.color = '#666';
+                row.appendChild(typeLabel);
+                
+                // Confidence label
+                var confLabel = document.createXULElement('label');
+                confLabel.id = nodeId + '-conf';
+                confLabel.setAttribute('value', _s('dialog-conf-label') + ' ' + confStr);
+                confLabel.style.marginLeft = '10px';
+                confLabel.style.marginRight = '10px';
+                if (blacklisted) {
+                    confLabel.style.color = '#808080';  // Gray
+                } else if (isExisting) {
+                    confLabel.style.color = '#C71585';  // Medium violet red
+                    confLabel.style.fontWeight = 'bold';
+                }
+                row.appendChild(confLabel);
+                
+                nodeContainer.appendChild(row);
+                
+                // Get Collection type
+                (function(nodeId, collectionId) {
+                    getCollectionType(collectionId).then(function(type) {
+                        var typeLabel = document.getElementById(nodeId + '-type');
+                        if (!typeLabel) return;
+                        
+                        if (type === 'external') {
+                            typeLabel.setAttribute('value', _s('dialog-type-external'));
+                            typeLabel.style.color = '#ff6b6b';
+                        } else if (type === 'internal') {
+                            typeLabel.setAttribute('value', _s('dialog-type-internal'));
+                            typeLabel.style.color = '#4ecdc4';
+                        }
+                    }).catch(function(e) {
+                        console.error('Error getting collection type:', e);
+                    });
+                })(nodeId, node.id);
+                
+                // Children container
+                if (hasChildren) {
+                    var childContainer = document.createXULElement('vbox');
+                    childContainer.id = nodeId + '-children';
+                    childContainer.setAttribute('data-parent-id', node.id);
+                    childContainer.style.marginLeft = '0px';
+                    buildTreeNodes(node.children, childContainer, level + 1);
+                    nodeContainer.appendChild(childContainer);
+                }
+                
+                container.appendChild(nodeContainer);
+            }
+        }
+        
+        // Checkbox state change handler
+        function onCheckboxChange(event) {
+            var checkbox = event.target;
+            var collectionId = parseInt(checkbox.getAttribute('data-collection-id'), 10);
+            var isChecked = checkbox.checked;
+            var wasBlacklisted = checkbox.getAttribute('data-blacklisted') === 'true';
+            var isExisting = isExistingCollection(collectionId);
+            
+            // Check if trying to select a new Collection
+            if (isChecked && !isExisting && !wasBlacklisted) {
+                // Check if limit reached (excluding currently selecting)
+                var existingCount = existingCollections.length;
+                var currentNewSelectedCount = getNewSelectedCount() - 1;  // Minus the one being selected
+                
+                if ((existingCount + currentNewSelectedCount) >= maxCollectionNum) {
+                    // Limit reached, prevent selection
+                    checkbox.checked = false;
+                    return;
+                }
+            }
+            
+            if (!isChecked && !wasBlacklisted) {
+                // User uncheck: add to blacklist
+                setBlacklistStyle(checkbox, true);
+                currentBlacklist.push(collectionId);
+                blacklistChanges.push({
+                    collectionId: collectionId,
+                    isBlacklisted: true
+                });
+            } else if (isChecked && wasBlacklisted) {
+                // User check: remove from blacklist
+                setBlacklistStyle(checkbox, false);
+                var idx = currentBlacklist.indexOf(collectionId);
+                if (idx !== -1) {
+                    currentBlacklist.splice(idx, 1);
+                }
+                blacklistChanges.push({
+                    collectionId: collectionId,
+                    isBlacklisted: false
+                });
+                
+                // Restore style: if existing, show existing style
+                if (isExisting) {
+                    setExistingStyle(checkbox, true);
+                }
+                
+                // Restore confidence label color
+                var nodeId = checkbox.id.replace('-checkbox', '');
+                var confLabel = document.getElementById(nodeId + '-conf');
+                if (confLabel) {
+                    if (isExisting) {
+                        confLabel.style.color = '#C71585';  // Medium violet red
+                        confLabel.style.fontWeight = 'bold';
+                    } else {
+                        confLabel.style.color = '';
+                        confLabel.style.fontWeight = '';
+                    }
+                }
+            }
+            
+            updateSendButton();
+        }
+        
+        function toggleNode(nodeId) {
+            var toggleBtn = document.getElementById(nodeId + '-toggle');
+            var childContainer = document.getElementById(nodeId + '-children');
+            
+            if (!toggleBtn || !childContainer) {
+                return;
+            }
+            
+            var isExpanded = toggleBtn.getAttribute('data-expanded') === 'true';
+            
+            if (isExpanded) {
+                // Collapse: hide children
+                toggleBtn.setAttribute('label', '+');
+                toggleBtn.setAttribute('data-expanded', 'false');
+                childContainer.style.display = 'none';
+            } else {
+                // Expand: show children
+                toggleBtn.setAttribute('label', '-');
+                toggleBtn.setAttribute('data-expanded', 'true');
+                childContainer.style.display = '';
+            }
+        }
+        
+        function applyThreshold() {
+            var thresholdInput = document.getElementById('threshold-input');
+            var threshold = parseFloat(thresholdInput.value);
+            
+            if (isNaN(threshold)) {
+                threshold = 0;
+            }
+            
+            threshold = Math.max(0, Math.min(1, threshold));
+            
+            var checkboxes = document.querySelectorAll('#tree-container checkbox[data-collection-key]');
+            var newSelectedCount = 0;  // Newly selected Collection count
+            
+            for (var i = 0; i < checkboxes.length; i++) {
+                var checkbox = checkboxes[i];
+                var conf = parseFloat(checkbox.getAttribute('data-confidence')) || 0;
+                var isBlacklistedNow = checkbox.getAttribute('data-blacklisted') === 'true';
+                var collectionId = parseInt(checkbox.getAttribute('data-collection-id'), 10);
+                var isExisting = isExistingCollection(collectionId);
+                
+                // Don't select blacklisted
+                if (isBlacklistedNow) {
+                    checkbox.checked = false;
+                } else if (isExisting) {
+                    // Always select existing
+                    checkbox.checked = true;
+                } else {
+                    // New Collection: apply threshold, but not exceeding allowed count
+                    if (newSelectedCount < allowedCollectionNum && conf >= threshold) {
+                        checkbox.checked = true;
+                        newSelectedCount++;
+                    } else {
+                        checkbox.checked = false;
+                    }
+                }
+            }
+            
+            // Auto expand/collapse based on selection
+            autoExpandCollapseTrees();
+            
+            updateSendButton();
+        }
+        
+        // Apply diversity control (priority 2: multi-label classification)
+        // Ensure recommended N Collections cover different types
+        // At least 70% internal-type, at most 30% external-type
+        async function applyDiversityControl() {
+            if (allowedCollectionNum === 0) return;
+            
+            // Calculate target counts for internal and external types
+            var minInternalCount = Math.ceil(allowedCollectionNum * 0.7);
+            var maxExternalCount = Math.floor(allowedCollectionNum * 0.3);
+            
+            console.log('Diversity Control: allowed=' + allowedCollectionNum + 
+                       ', minInternal=' + minInternalCount + ', maxExternal=' + maxExternalCount);
+            
+            // Collect all non-blacklisted, non-existing nodes with confidence > 0
+            var candidateNodes = [];
+            for (var i = 0; i < allNodes.length; i++) {
+                var nodeInfo = allNodes[i];
+                if (!nodeInfo.blacklisted && !nodeInfo.isExisting && nodeInfo.confidence > 0) {
+                    candidateNodes.push(nodeInfo);
+                }
+            }
+            
+            // Sort by similarity (high to low)
+            candidateNodes.sort(function(a, b) {
+                return b.confidence - a.confidence;
+            });
+            
+            // Get Collection types for all candidate nodes
+            var nodesWithTypes = [];
+            for (var i = 0; i < candidateNodes.length; i++) {
+                var nodeInfo = candidateNodes[i];
+                var collectionId = nodeInfo.node.id;
+                var type = await getCollectionType(collectionId);
+                nodesWithTypes.push({
+                    nodeInfo: nodeInfo,
+                    type: type
+                });
+            }
+            
+            // Collect internal and external nodes separately
+            var internalNodes = nodesWithTypes.filter(function(n) { return n.type === 'internal'; });
+            var externalNodes = nodesWithTypes.filter(function(n) { return n.type === 'external'; });
+            
+            console.log('Diversity Control: internal=' + internalNodes.length + ', external=' + externalNodes.length);
+            
+            // Select internal nodes (at least minInternalCount)
+            var selectedInternal = Math.min(minInternalCount, internalNodes.length);
+            for (var i = 0; i < selectedInternal; i++) {
+                var nodeInfo = internalNodes[i].nodeInfo;
+                var checkbox = document.getElementById(nodeInfo.nodeId + '-checkbox');
+                if (checkbox) {
+                    checkbox.checked = true;
+                    recommendedCount++;
+                    recommendedInternalCount++;
+                }
+            }
+            
+            // Select external nodes (at most maxExternalCount)
+            var selectedExternal = Math.min(maxExternalCount, externalNodes.length);
+            for (var i = 0; i < selectedExternal; i++) {
+                var nodeInfo = externalNodes[i].nodeInfo;
+                var checkbox = document.getElementById(nodeInfo.nodeId + '-checkbox');
+                if (checkbox) {
+                    checkbox.checked = true;
+                    recommendedCount++;
+                    recommendedExternalCount++;
+                }
+            }
+            
+            // If slots remain, select by similarity
+                var remainingSlots = allowedCollectionNum - (selectedInternal + selectedExternal);
+            if (remainingSlots > 0) {
+                // Collect unselected nodes
+                var remainingNodes = nodesWithTypes.filter(function(n) {
+                    var checkbox = document.getElementById(n.nodeInfo.nodeId + '-checkbox');
+                    return checkbox && !checkbox.checked;
+                });
+                
+                // Sort by similarity
+                remainingNodes.sort(function(a, b) {
+                    return b.nodeInfo.confidence - a.nodeInfo.confidence;
+                });
+                
+                // Select remaining nodes
+                for (var i = 0; i < Math.min(remainingSlots, remainingNodes.length); i++) {
+                    var nodeInfo = remainingNodes[i].nodeInfo;
+                    var checkbox = document.getElementById(nodeInfo.nodeId + '-checkbox');
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        recommendedCount++;
+                        if (remainingNodes[i].type === 'internal') {
+                            recommendedInternalCount++;
+                        } else {
+                            recommendedExternalCount++;
+                        }
+                    }
+                }
+            }
+            
+            console.log('Diversity Control: total=' + recommendedCount + 
+                       ', internal=' + recommendedInternalCount + ', external=' + recommendedExternalCount);
+        }
+        
+        // Auto expand/collapse subtrees
+        function autoExpandCollapseTrees() {
+            var toggleBtns = document.querySelectorAll('button[data-node-id]');
+            
+            for (var i = 0; i < toggleBtns.length; i++) {
+                var btn = toggleBtns[i];
+                var nodeId = btn.getAttribute('data-node-id');
+                var childContainer = document.getElementById(nodeId + '-children');
+                
+                if (!childContainer) continue;
+                
+                // Check if subtree has selected nodes
+                var hasSelectedInSubtree = checkSubtreeSelection(childContainer);
+                
+                if (hasSelectedInSubtree) {
+                    // Has selected nodes, expand subtree
+                    btn.setAttribute('label', '-');
+                    btn.setAttribute('data-expanded', 'true');
+                    childContainer.style.display = '';
+                } else {
+                    // No selected nodes, collapse subtree
+                    btn.setAttribute('label', '+');
+                    btn.setAttribute('data-expanded', 'false');
+                    childContainer.style.display = 'none';
+                }
+            }
+        }
+        
+        // Check if subtree has selected nodes
+        function checkSubtreeSelection(container) {
+            var checkboxes = container.querySelectorAll('checkbox[data-collection-key]');
+            
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (checkboxes[i].checked) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        function updateSendButton() {
+            var okBtn = document.getElementById('ok-btn');
+            var checkboxes = document.querySelectorAll('#tree-container checkbox[data-collection-key]');
+            var hasChecked = false;
+            
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (checkboxes[i].checked) {
+                    hasChecked = true;
+                    break;
+                }
+            }
+            
+            // OK button disabled when no selection
+            okBtn.disabled = !hasChecked;
+            // Retry button always enabled
+        }
+        
+        function getSelectedCollections() {
+            var selectedCollections = [];
+            var checkboxes = document.querySelectorAll('#tree-container checkbox[data-collection-key]');
+            
+            for (var i = 0; i < checkboxes.length; i++) {
+                var checkbox = checkboxes[i];
+                if (checkbox.checked) {
+                    var confidence = parseFloat(checkbox.getAttribute('data-confidence')) || 0;
+                    
+                    selectedCollections.push({
+                        key: checkbox.getAttribute('data-collection-key'),
+                        id: checkbox.getAttribute('data-collection-id'),
+                        name: checkbox.getAttribute('label'),
+                        confidence: confidence
+                    });
+                }
+            }
+            
+            return selectedCollections;
+        }
+        
+        // Retry: recalculate recommendations with current blacklist
+        async function onRetry() {
+            // Save current blacklist changes first
+            if (window.arguments && window.arguments[0]) {
+                window.arguments[0].blacklistChanges = blacklistChanges;
+            }
+            
+            // Show loading state
+            var treeContainer = document.getElementById('tree-container');
+            if (treeContainer) {
+                // Clear children via DOM (recommended for XUL)
+                while (treeContainer.firstChild) {
+                    treeContainer.removeChild(treeContainer.firstChild);
+                }
+                var loadingLabel = document.createXULElement('label');
+                loadingLabel.setAttribute('value', _s('dialog-recalculating'));
+                loadingLabel.style.fontStyle = 'italic';
+                loadingLabel.style.color = '#666';
+                treeContainer.appendChild(loadingLabel);
+            }
+            
+            try {
+                // Get Zotero object (via window.opener or Services)
+                var ZoteroObj = null;
+                if (window.opener && window.opener.Zotero) {
+                    ZoteroObj = window.opener.Zotero;
+                } else if (typeof Zotero !== 'undefined') {
+                    ZoteroObj = Zotero;
+                } else {
+                    // Try to get via Services
+                    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                        .getService(Components.interfaces.nsIWindowMediator);
+                    var win = wm.getMostRecentWindow("navigator:browser");
+                    if (win && win.Zotero) {
+                        ZoteroObj = win.Zotero;
+                    }
+                }
+                
+                var router = (ZoteroObj && (ZoteroObj.PaperRouter || ZoteroObj.TidyUp)) || getRouterObject();
+                if (!router) {
+                    throw new Error('PaperRouter not found');
+                }
+
+                // Convert current blacklist to Set
+                var blacklistSet = new Set(currentBlacklist);
+                
+                // Recalculate sorting
+                var newCollections = await router.SortCollectionsByItemName(savedItemName, blacklistSet);
+                
+                // Clear tree container
+                if (treeContainer) {
+                    // Clear children via DOM (recommended for XUL)
+                    while (treeContainer.firstChild) {
+                        treeContainer.removeChild(treeContainer.firstChild);
+                    }
+                    nodeIdCounter = 0;  // Reset counter
+                    highlightedNodes = [];  // Reset highlight list
+                    recommendedCount = 0;  // Reset recommendation counter
+                    
+                    // Rebuild tree
+                    buildTreeNodes(newCollections, treeContainer, 0);
+                    
+                    // Clear search box state
+                    var searchInput = document.getElementById('search-input');
+                    if (searchInput) {
+                        searchInput.style.backgroundColor = '';
+                        searchInput.title = '';
+                    }
+                    
+                    // Update Tips message
+                    updateTipsMessage();
+                    
+                    // Recalculate threshold
+                    var initialThreshold = calculateInitialThreshold(5);
+                    var thresholdInput = document.getElementById('threshold-input');
+                    thresholdInput.value = initialThreshold.toFixed(4);
+                    
+                    // Apply threshold
+                    applyThreshold();
+                }
+            } catch (e) {
+                // Show error
+                if (treeContainer) {
+                    // Clear children via DOM (recommended for XUL)
+                    while (treeContainer.firstChild) {
+                        treeContainer.removeChild(treeContainer.firstChild);
+                    }
+                    var errorLabel = document.createXULElement('label');
+                    errorLabel.setAttribute('value', _s('dialog-error', { msg: e.message }));
+                    errorLabel.style.color = 'red';
+                    treeContainer.appendChild(errorLabel);
+                }
+            }
+        }
+        
+        function onAccept() {
+            var selectedCollections = getSelectedCollections();
+            
+            if (selectedCollections.length === 0) {
+                return;
+            }
+            
+            if (window.arguments && window.arguments[0]) {
+                window.arguments[0].selectedCollections = selectedCollections;
+                window.arguments[0].sendToCollections = true;
+                window.arguments[0].blacklistChanges = blacklistChanges;
+            }
+            window.close();
+        }
+        
+        function onCancel() {
+            if (window.arguments && window.arguments[0]) {
+                window.arguments[0].selectedCollections = null;
+                window.arguments[0].sendToCollections = false;
+                window.arguments[0].blacklistChanges = blacklistChanges;
+            }
+            window.close();
+        }
+        
+        function selectAll() {
+            var checkboxes = document.querySelectorAll('#tree-container checkbox');
+            for (var i = 0; i < checkboxes.length; i++) {
+                var checkbox = checkboxes[i];
+                var isBlacklistedNow = checkbox.getAttribute('data-blacklisted') === 'true';
+                if (!isBlacklistedNow) {
+                    checkbox.checked = true;
+                }
+            }
+            autoExpandCollapseTrees();
+            updateSendButton();
+        }
+        
+        function deselectAll() {
+            var checkboxes = document.querySelectorAll('#tree-container checkbox');
+            for (var i = 0; i < checkboxes.length; i++) {
+                checkboxes[i].checked = false;
+            }
+            autoExpandCollapseTrees();
+            updateSendButton();
+        }
+        
+        function expandAll() {
+            var toggleBtns = document.querySelectorAll('button[data-node-id]');
+            
+            for (var i = 0; i < toggleBtns.length; i++) {
+                var btn = toggleBtns[i];
+                var nodeId = btn.getAttribute('data-node-id');
+                var childContainer = document.getElementById(nodeId + '-children');
+                
+                if (childContainer) {
+                    btn.setAttribute('label', '-');
+                    btn.setAttribute('data-expanded', 'true');
+                    childContainer.style.display = '';
+                }
+            }
+        }
+        
+        function collapseAll() {
+            var toggleBtns = document.querySelectorAll('button[data-node-id]');
+            
+            for (var i = 0; i < toggleBtns.length; i++) {
+                var btn = toggleBtns[i];
+                var nodeId = btn.getAttribute('data-node-id');
+                var childContainer = document.getElementById(nodeId + '-children');
+                
+                if (childContainer) {
+                    btn.setAttribute('label', '+');
+                    btn.setAttribute('data-expanded', 'false');
+                    childContainer.style.display = 'none';
+                }
+            }
+        }
+        
+        // ==================== Quick locator feature ====================
+        
+        // Currently highlighted nodes
+        var highlightedNodes = [];
+        
+        // Search input keypress handler
+        function onSearchKeypress(event) {
+            if (event.key === 'Enter' || event.keyCode === 13) {
+                performSearch();
+                event.preventDefault();
+            }
+        }
+        
+        // Execute search
+        function performSearch() {
+            var searchInput = document.getElementById('search-input');
+            var keyword = searchInput.value.trim();
+            
+            // Clear previous highlights first
+            clearHighlights();
+            
+            if (!keyword) {
+                return;
+            }
+            
+            // Convert to lowercase for fuzzy match
+            var keywordLower = keyword.toLowerCase();
+            var matchCount = 0;
+            
+            // Iterate all checkboxes
+            var checkboxes = document.querySelectorAll('#tree-container checkbox[data-collection-key]');
+            
+            for (var i = 0; i < checkboxes.length; i++) {
+                var checkbox = checkboxes[i];
+                var label = checkbox.getAttribute('label') || '';
+                var labelLower = label.toLowerCase();
+                
+                // Fuzzy match: check if keyword in label
+                if (labelLower.indexOf(keywordLower) !== -1) {
+                    // Highlight matched node
+                    highlightNode(checkbox);
+                    matchCount++;
+                    
+                    // Expand parents to show match
+                    expandParents(checkbox);
+                }
+            }
+            
+            // Update search box style to show match count
+            if (matchCount > 0) {
+                searchInput.style.backgroundColor = '#e8f5e9';
+                searchInput.title = _s('dialog-search-found', { count: matchCount });
+            } else {
+                searchInput.style.backgroundColor = '#ffebee';
+                searchInput.title = _s('dialog-search-not-found');
+            }
+        }
+        
+        // Highlight single node
+        function highlightNode(checkbox) {
+            // Save original style
+            if (!checkbox.getAttribute('data-original-bg')) {
+                var originalBg = checkbox.style.backgroundColor || '';
+                var originalColor = checkbox.style.color || '';
+                var originalFontWeight = checkbox.style.fontWeight || '';
+                checkbox.setAttribute('data-original-bg', originalBg);
+                checkbox.setAttribute('data-original-color', originalColor);
+                checkbox.setAttribute('data-original-weight', originalFontWeight);
+            }
+            
+            // Apply highlight style
+            checkbox.style.backgroundColor = '#fff59d';  // Yellow background
+            checkbox.style.color = '#000000';  // Black text
+            checkbox.style.fontWeight = 'bold';
+            
+            // Also highlight confidence label
+            var nodeId = checkbox.id.replace('-checkbox', '');
+            var confLabel = document.getElementById(nodeId + '-conf');
+            if (confLabel) {
+                if (!confLabel.getAttribute('data-original-bg')) {
+                    confLabel.setAttribute('data-original-bg', confLabel.style.backgroundColor || '');
+                }
+                confLabel.style.backgroundColor = '#fff59d';
+            }
+            
+            // Add to highlight list
+            highlightedNodes.push(checkbox);
+        }
+        
+        // Expand parent nodes
+        function expandParents(checkbox) {
+            var container = checkbox;
+            
+            // Traverse DOM upward, find all child containers and expand
+            while (container) {
+                if (container.id && container.id.endsWith('-children')) {
+                    // This is a child container, needs expanding
+                    container.style.display = '';
+                    
+                    // Update expand button state
+                    var parentId = container.id.replace('-children', '');
+                    var toggleBtn = document.querySelector('button[data-node-id="' + parentId + '"]');
+                    if (toggleBtn) {
+                        toggleBtn.setAttribute('label', '-');
+                        toggleBtn.setAttribute('data-expanded', 'true');
+                    }
+                }
+                
+                container = container.parentElement;
+            }
+        }
+        
+        // Clear highlights
+        function clearHighlights() {
+            for (var i = 0; i < highlightedNodes.length; i++) {
+                var checkbox = highlightedNodes[i];
+                
+                // Restore original style
+                checkbox.style.backgroundColor = checkbox.getAttribute('data-original-bg') || '';
+                checkbox.style.color = checkbox.getAttribute('data-original-color') || '';
+                checkbox.style.fontWeight = checkbox.getAttribute('data-original-weight') || '';
+                
+                // Clear data attributes
+                checkbox.removeAttribute('data-original-bg');
+                checkbox.removeAttribute('data-original-color');
+                checkbox.removeAttribute('data-original-weight');
+                
+                // Restore confidence label style
+                var nodeId = checkbox.id.replace('-checkbox', '');
+                var confLabel = document.getElementById(nodeId + '-conf');
+                if (confLabel && confLabel.getAttribute('data-original-bg') !== null) {
+                    confLabel.style.backgroundColor = confLabel.getAttribute('data-original-bg') || '';
+                    confLabel.removeAttribute('data-original-bg');
+                }
+            }
+            
+            highlightedNodes = [];
+        }
+        
+        // Clear search
+        function clearSearch() {
+            var searchInput = document.getElementById('search-input');
+            searchInput.value = '';
+            searchInput.style.backgroundColor = '';
+            searchInput.title = '';
+
+            // Clear highlights
+            clearHighlights();
+        }
+
+        // Hide rows with Conf = 0 when checkbox is on
+        function applyHideZero() {
+            var cb = document.getElementById('cb-hide-zero');
+            if (!cb) return;
+            var hide = cb.checked;
+            allNodes.forEach(function(n) {
+                var container = document.getElementById(n.nodeId + '-container');
+                if (!container) return;
+                var isZero = !n.confidence || parseFloat(n.confidence) === 0;
+                container.style.display = (hide && isZero) ? 'none' : '';
+            });
+        }
+    ]]></script>
+    
+    <!-- HTML flexbox layout: header / main (scrollable) / footer (sticky). -->
+    <!-- Outer vbox uses CSS flex column so the children's flex/min-height/overflow chain works in Zotero 8. -->
+    <vbox flex="1" style="display: flex; flex-direction: column; height: 100%; padding: 10px;">
+
+        <html:div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 6px;">
+            <label id="dialog-select-prompt" value="Select collections to include:" />
+            <hbox align="center">
+                <button id="btn-select-all" label="Select All" oncommand="selectAll();" />
+                <button id="btn-deselect-all" label="Deselect All" oncommand="deselectAll();" />
+                <button id="btn-expand-all" label="Expand All" oncommand="expandAll();" />
+                <button id="btn-collapse-all" label="Collapse All" oncommand="collapseAll();" />
+                <button id="send-btn" label="Retry" oncommand="onRetry();" />
+                <spacer flex="1" />
+                <checkbox id="cb-hide-zero" label="" oncommand="applyHideZero();" />
+                <spacer width="10" />
+                <label id="dialog-threshold-label" value="Thrd.:" />
+                <html:input id="threshold-input" type="number" min="0" max="1" step="0.01" value="0" style="width: 60px;" onchange="applyThreshold();" />
+            </hbox>
+        </html:div>
+
+        <vbox id="collections-container" style="flex: 1; min-height: 0; overflow-y: auto; border: 1px solid gray; padding: 5px;" />
+
+        <html:div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+            <hbox align="center" style="padding: 2px 4px; font-size: 11px; color: #666;">
+                <html:span style="color: #C71585;">●</html:span>
+                <label id="dialog-legend-existing-label" value="" style="margin: 0 15px 0 4px;" />
+                <html:span style="color: #808080;">●</html:span>
+                <label id="dialog-legend-blacklisted-label" value="" style="margin-left: 4px;" />
+            </hbox>
+
+            <hbox align="center" style="padding: 5px; border: 1px solid #ccc; background-color: #f5f5f5;">
+                <label id="dialog-search-label" value="Quick search:" style="font-weight: bold;" />
+                <html:input id="search-input" type="text" placeholder="" style="flex: 1; min-width: 200px; padding: 3px;" onkeypress="onSearchKeypress(event);" />
+                <button id="btn-search" label="Search" oncommand="performSearch();" style="min-width: 60px;" />
+                <button id="btn-clear-search" label="Clear" oncommand="clearSearch();" style="min-width: 60px;" />
+            </hbox>
+
+            <hbox align="center" style="padding: 5px; border: 1px solid #ddd; background-color: #fff8e1;">
+                <label id="dialog-tips-label" value="Tips:" style="font-weight: bold; color: #f57c00;" />
+                <label id="tips-message" value="" style="color: #333; margin-left: 5px;" flex="1" />
+            </hbox>
+
+            <hbox>
+                <spacer flex="1" />
+                <button label="OK" id="ok-btn" oncommand="onAccept();" />
+                <button label="Cancel" oncommand="onCancel();" />
+            </hbox>
+        </html:div>
+
+    </vbox>
+</window>

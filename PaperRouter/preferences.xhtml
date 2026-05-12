@@ -1,0 +1,176 @@
+<!--
+  This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+  PaperRouter — Smart Zotero collection router
+  Copyright (c) Mike Zhou (Keshen Zhou)
+  Copyright (c) Wight
+  2026 PaperRouter rewrite based on the original Tidy Up plugin.
+-->
+<vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      style="padding: 20px;">
+
+    <!-- Language -->
+    <groupbox style="margin-bottom: 20px;">
+        <caption>
+            <label id="l10n-language-caption" value=""/>
+        </caption>
+        <html:p id="l10n-language-desc" style="color: #666; font-size: 12px; margin-bottom: 10px;"/>
+        <hbox align="center">
+            <label id="l10n-language-label" value="" style="width: 120px;"/>
+            <menulist id="language-select">
+                <menupopup>
+                    <menuitem value="auto"/>
+                    <menuitem value="zh-CN"/>
+                    <menuitem value="zh-TW"/>
+                    <menuitem value="en-US"/>
+                </menupopup>
+            </menulist>
+        </hbox>
+    </groupbox>
+
+    <html:h2 id="l10n-api-settings" style="margin-bottom: 10px;"/>
+    <html:p id="l10n-api-intro" style="color: #666; margin-bottom: 15px;"/>
+
+    <!-- Embedding API -->
+    <groupbox style="margin-bottom: 15px;">
+        <html:h3 style="margin: 0 0 6px 0;">
+            <html:span id="l10n-embedding"/>
+            <html:span id="embedding-status" style="margin-left:10px; font-size:12px; color:#888; font-weight:normal;"/>
+        </html:h3>
+        <html:p id="l10n-embedding-desc" style="color: #666; font-size: 12px; margin: 0 0 10px 0;"/>
+
+        <hbox align="center" style="margin-bottom: 10px;">
+            <label id="l10n-provider" value="" style="width: 120px;"/>
+            <menulist id="embedding-provider">
+                <menupopup id="embedding-provider-popup"/>
+            </menulist>
+        </hbox>
+        <html:p id="embedding-provider-hint" style="font-size:11px; color:#666; margin:0 0 10px 128px; font-style:italic;"/>
+
+        <hbox align="center" style="margin-bottom: 10px;">
+            <label id="l10n-base-api-embedding" value="" style="width: 120px;"/>
+            <html:input id="embedding-base-url" type="text" style="flex: 1; min-width: 300px;"/>
+        </hbox>
+
+        <hbox align="center" style="margin-bottom: 10px;">
+            <label id="l10n-api-key" value="" style="width: 120px;"/>
+            <html:input id="embedding-api-key" type="password" style="flex: 1; min-width: 300px;"/>
+        </hbox>
+        <html:p id="embedding-key-empty-hint" style="font-size:11px; color:#d97706; margin:0 0 10px 128px; display:none; font-style:italic;"/>
+
+        <hbox align="center" style="margin-bottom: 10px;">
+            <label id="l10n-model" value="" style="width: 120px;"/>
+            <html:input id="embedding-model" type="text" list="embedding-model-options" style="flex: 1; min-width: 300px;"/>
+            <html:datalist id="embedding-model-options"/>
+        </hbox>
+
+        <hbox align="center" style="margin-top: 12px;">
+            <button id="btn-test"/>
+            <html:span id="test-status" style="margin-left: 10px; display: none;"/>
+            <spacer flex="1"/>
+            <label id="l10n-cached-count" value="" style="color: #666; font-size: 11px;"/>
+            <label id="cache-count" value="0" style="margin: 0 6px; color: #666; font-size: 11px;"/>
+            <button id="btn-refresh-cache"/>
+            <button id="btn-clear-cache" style="margin-left: 6px;"/>
+        </hbox>
+    </groupbox>
+
+    <!-- LLM API -->
+    <groupbox style="margin-bottom: 15px;">
+        <html:h3 style="margin: 0 0 6px 0;">
+            <html:span id="l10n-llm"/>
+            <html:span id="llm-status" style="margin-left:10px; font-size:12px; color:#888; font-weight:normal;"/>
+        </html:h3>
+        <html:p id="l10n-llm-desc" style="color: #666; font-size: 12px; margin: 0 0 10px 0;"/>
+
+        <hbox align="start" style="margin-bottom: 10px;">
+            <label id="l10n-algorithm" value="" style="width: 120px; margin-top: 3px;"/>
+            <html:div id="classification-algorithm" style="display:flex; flex-direction:column; gap:8px;">
+                <html:label style="display:flex; align-items:center; gap:6px;">
+                    <html:input type="radio" name="alg" value="vector" checked="checked"/>
+                    <html:span id="l10n-alg-vector"/>
+                    <html:span id="l10n-alg-vector-hint" style="color:#888; font-size:11px;"/>
+                </html:label>
+                <html:label style="display:flex; align-items:center; gap:6px;">
+                    <html:input type="radio" name="alg" value="zeroshot"/>
+                    <html:span id="l10n-alg-zeroshot"/>
+                    <html:span id="l10n-alg-zeroshot-hint" style="color:#888; font-size:11px;"/>
+                </html:label>
+            </html:div>
+        </hbox>
+        <html:p id="algorithm-warning" style="color:#f59e0b; font-size:12px; margin:0 0 10px 128px; display:none;"/>
+
+        <hbox align="center" style="margin-bottom: 10px;">
+            <label id="l10n-llm-provider" value="" style="width: 120px;"/>
+            <menulist id="llm-provider">
+                <menupopup id="llm-provider-popup"/>
+            </menulist>
+        </hbox>
+        <html:p id="llm-provider-hint" style="font-size:11px; color:#666; margin:0 0 10px 128px; font-style:italic;"/>
+
+        <hbox align="center" style="margin-bottom: 10px;">
+            <label id="l10n-base-api-llm" value="" style="width: 120px;"/>
+            <html:input id="llm-base-url" type="text" style="flex: 1; min-width: 300px;"/>
+        </hbox>
+
+        <hbox align="center" style="margin-bottom: 10px;">
+            <label id="l10n-api-key-llm" value="" style="width: 120px;"/>
+            <html:input id="llm-api-key" type="password" style="flex: 1; min-width: 300px;"/>
+        </hbox>
+        <html:p id="llm-key-empty-hint" style="font-size:11px; color:#d97706; margin:0 0 10px 128px; display:none; font-style:italic;"/>
+
+        <hbox align="center" style="margin-bottom: 10px;">
+            <label id="l10n-model-llm" value="" style="width: 120px;"/>
+            <menulist id="llm-model-select" style="flex: 1; min-width: 300px;">
+                <menupopup id="llm-model-popup"/>
+            </menulist>
+        </hbox>
+        <hbox align="center" style="margin-bottom: 10px; display:none;" id="llm-model-custom-row">
+            <label id="l10n-model-custom-label" value="" style="width: 120px;"/>
+            <html:input id="llm-model-custom" type="text" style="flex:1; min-width:300px;"/>
+        </hbox>
+
+        <hbox align="center" style="margin-top: 12px;">
+            <button id="btn-test-llm"/>
+            <html:span id="llm-test-status" style="margin-left: 10px; display: none;"/>
+        </hbox>
+    </groupbox>
+
+    <!-- Global save -->
+    <hbox align="center" style="margin-top: 10px; margin-bottom: 15px;">
+        <spacer flex="1"/>
+        <button id="btn-save"/>
+    </hbox>
+
+    <groupbox style="margin-top: 15px;">
+        <caption id="l10n-test-mode"/>
+        <html:p id="l10n-test-mode-desc" style="color: #666; font-size: 12px; margin-bottom: 10px;"/>
+        <hbox align="center" style="margin-bottom: 10px;">
+            <checkbox id="test-mode-enabled"/>
+            <spacer flex="1"/>
+            <label id="test-mode-status" value="" style="color: #d9534f; font-weight: bold;"/>
+        </hbox>
+        <hbox align="center" style="margin-bottom: 10px;">
+            <label id="l10n-max-process" value="" style="width: 120px;"/>
+            <html:input id="test-mode-max-collections" type="number" style="width: 80px;" min="1" max="100" value="3"/>
+            <label id="l10n-collections-unit" value="" style="margin-left: 5px;"/>
+        </hbox>
+        <hbox align="center">
+            <checkbox id="test-mode-mock-api"/>
+        </hbox>
+    </groupbox>
+
+    <groupbox style="margin-top: 15px;">
+        <caption id="l10n-collection-limit"/>
+        <html:p id="l10n-collection-limit-desc" style="color: #666; font-size: 12px; margin-bottom: 10px;"/>
+        <hbox align="center">
+            <label id="l10n-max-collections" value="" style="width: 140px;"/>
+            <html:input id="max-collection-num" type="number" style="width: 60px;" min="1" max="20" value="4"/>
+            <label id="l10n-max-collections-unit" value="" style="margin-left: 5px;"/>
+            <spacer flex="1"/>
+            <label id="max-collection-hint" value="" style="color: #666; font-size: 11px;"/>
+        </hbox>
+    </groupbox>
+</vbox>
