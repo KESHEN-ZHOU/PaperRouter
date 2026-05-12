@@ -1,5 +1,5 @@
 // tests/unit/providers.test.js
-// 3.0.5: tests run against the real IIFE module via vm sandbox loader.
+// Tests run against the real IIFE module via vm sandbox loader.
 const { loadProviders } = require('../helpers/load-providers');
 const { LLM_PROVIDERS_KEYS, EMBEDDING_PROVIDERS_KEYS } = require('../fixtures/providers-expected');
 
@@ -242,7 +242,7 @@ describe('parseChatResponse', () => {
     expect(P.parseChatResponse('cohere', 'plain_cohere', { text: 'ok' })).toEqual({ content: 'ok', error: null });
   });
 
-  // 3.0.6: HTTP-200-but-empty paths now surface a specific error string instead of returning silently.
+  // HTTP-200-but-empty paths surface a specific error string instead of returning silently.
   test('OpenAI empty content + non-length finish_reason → error includes finish reason', () => {
     const data = { choices: [{ message: { content: '' }, finish_reason: 'content_filter' }] };
     expect(P.parseChatResponse('openai', 'plain_openai', data)).toEqual({

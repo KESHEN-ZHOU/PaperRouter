@@ -1,13 +1,13 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * PaperRouter — Smart Zotero collection router
+ * PaperRouter — Zotero collection router
  * Copyright (c) Mike Zhou (Keshen Zhou)
  * Copyright (c) Wight
  * 2026 PaperRouter rewrite based on the original Tidy Up plugin.
  */
 
-// 3.0.5: Provider tables moved to chrome/content/providers.js (loaded by bootstrap.js).
+// Provider tables live in chrome/content/providers.js (loaded by bootstrap.js).
 // Settings UI references the same shared objects so updates land in one place.
 // recommendedModels for LLM are objects {name, tier}; for Embedding stay as plain string[].
 // Cohere added to LLM, Ollama commented out (default flow assumes API).
@@ -261,9 +261,9 @@ var TidyUpPrefs = {
         return (url || '').replace(/\/v\d+(beta)?\/?$/i, '');
     },
 
-    // Heuristic cleanup for v3.0.2 migration / cross-pollution leaks:
+    // Heuristic cleanup for legacy global → per-provider model migration:
     // a per-provider model that (a) equals the legacy global model AND (b) is not in that provider's
-    // recommendedModels list is almost certainly a stale leak from before v3.0.3. Clear it so the
+    // recommendedModels list is almost certainly a stale cross-pollution leak. Clear it so the
     // model picker falls back to the provider's defaultModel.
     _cleanupMigrationLeaks: function() {
         try {
@@ -290,9 +290,8 @@ var TidyUpPrefs = {
         }
     },
 
-    // 3.0.5: o-series (o1/o3/o4) dropped — request would fail with "Unsupported parameter: max_tokens".
-    // 3.0.6: gemini-1.5/2.0 dropped (deprecated/silent failure); openrouter old defaults dropped;
-    //        embedding.gemini fully removed (text-embedding-004 deprecated).
+    // Reset saved prefs that point at models we no longer ship (OpenAI o-series,
+    // legacy Gemini, dropped OpenRouter defaults, Gemini embedding).
     _cleanupRemovedModels: function() {
         try {
             var resetIf = function(path, predicate, fallback) {
@@ -315,7 +314,7 @@ var TidyUpPrefs = {
                 function(s) { return orRemoved.indexOf(s) !== -1; },
                 LLM_PROVIDERS.openrouter.defaultModel);
 
-            // Embedding side: 3.0.6 removed Gemini. If user had it selected, reset to '' so they re-pick.
+            // Embedding side: Gemini removed. If user had it selected, reset to '' so they re-pick.
             resetIf('extensions.tidy-up.embedding.provider',
                 function(s) { return s === 'gemini'; },
                 '');
@@ -514,7 +513,7 @@ var TidyUpPrefs = {
         }
     },
     
-    // 3.0.6: wrap fetch with a 30s AbortController timeout so the test connection button
+    // Wrap fetch with a 30s AbortController timeout so the test-connection button
     // cannot hang indefinitely on a stalled network. AbortError is rewritten to a
     // user-readable 'Request timeout (30s)' string.
     _fetchWithTimeout: function(url, options) {
@@ -583,7 +582,6 @@ var TidyUpPrefs = {
             });
 
         }
-        // 3.0.6: gemini embedding branch removed — text-embedding-004 deprecated.
 
         return Promise.resolve(null);
     },

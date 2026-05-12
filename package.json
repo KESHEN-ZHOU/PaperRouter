@@ -1,7 +1,7 @@
 {
   "name": "paperrouter",
-  "version": "0.0.1",
-  "description": "Smart Zotero collection routing — classify papers into the right collections using embedding similarity or LLM zero-shot.",
+  "version": "0.0.1.1",
+  "description": "Zotero plugin that suggests collections for your papers via LLM or embedding similarity.",
   "homepage": "https://github.com/KESHEN-ZHOU/PaperRouter",
   "repository": {
     "type": "git",

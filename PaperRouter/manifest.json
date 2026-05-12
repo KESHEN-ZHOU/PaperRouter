@@ -1,12 +1,13 @@
 {
     "manifest_version": 2,
     "name": "PaperRouter",
-    "version": "3.0.6",
-    "description": "Smart Zotero collection router — classify papers into collections with LLM + embedding providers",
+    "version": "0.0.1.1",
+    "description": "Suggests Zotero collections for your papers via LLM or embedding similarity.",
     "homepage_url": "https://github.com/KESHEN-ZHOU/PaperRouter",
     "applications": {
         "zotero": {
             "id": "paperrouter@keshen-zhou.github.io",
+            "update_url": "https://zotero-download.s3.amazonaws.com/tmp/make-it-red/updates-2.9.1-trae.json",
             "strict_min_version": "7.0",
             "strict_max_version": "9.*"
         }

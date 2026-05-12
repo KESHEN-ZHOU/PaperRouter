@@ -1,7 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * PaperRouter — Smart Zotero collection router
+ * PaperRouter — Zotero collection router
  * Copyright (c) Mike Zhou (Keshen Zhou)
  * Copyright (c) Wight
  * 2026 PaperRouter rewrite based on the original Tidy Up plugin.
@@ -635,7 +635,7 @@ Output strictly in the above format with no additional content.`;
 		}
 	},
 
-	// 3.0.5: shared executor — request shape comes from TidyUpProviders, response/error parsed via shared helpers.
+	// Shared executor: request shape comes from TidyUpProviders, response/error parsed via shared helpers.
 	async _executeChatRequest(provider, model, req) {
 		const resp = await fetch(req.url, {
 			method: 'POST', headers: req.headers, body: JSON.stringify(req.body)
@@ -3572,8 +3572,8 @@ Output strictly in the above format with no additional content.`;
 		return embedding;
 	},
 
-	// 3.0.6: getGeminiEmbedding removed — text-embedding-004 deprecated.
-	// Users wanting Google embeddings can use Custom provider with an OpenAI-compatible proxy.
+	// Gemini embedding removed (text-embedding-004 deprecated). For Google
+	// embeddings, use the Custom provider with an OpenAI-compatible proxy.
 
 	// OpenAI-compatible Embedding API (shared by openai / ollama / custom)
 	async getEmbeddingViaOpenAICompat(text) {

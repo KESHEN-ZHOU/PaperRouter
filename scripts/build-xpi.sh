@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION=$(grep '"version"' "$ROOT/PaperRouter/manifest.json" | head -1 | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+VERSION=$(grep '"version"' "$ROOT/PaperRouter/manifest.json" | head -1 | sed -E 's/.*"([0-9]+(\.[0-9]+)+)".*/\1/')
 OUT_DIR="$ROOT/dist"
 OUT_FILE="$OUT_DIR/paperrouter-${VERSION}.xpi"
 

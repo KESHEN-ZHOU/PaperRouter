@@ -1,5 +1,5 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
- * PaperRouter — Smart Zotero collection router
+ * PaperRouter — Zotero collection router
  * Copyright (c) Mike Zhou (Keshen Zhou) and Wight, 2026.
  *
  * Shared LLM / Embedding provider capability table + request builders + response/error parsers.
@@ -56,8 +56,8 @@ var TidyUpProviders = (function() {
             displayName: 'OpenRouter',
             defaultBaseUrl: 'https://openrouter.ai/api/v1',
             defaultModel: 'deepseek/deepseek-v4-flash',
-            // 3.0.6: refreshed for cheap non-thinking open / Chinese models.
-            // Avoid thinking variants (deepseek-r1, kimi-k2-thinking) — task is binary classification,
+            // Cheap non-thinking open / Chinese models. Avoid thinking variants
+            // (deepseek-r1, kimi-k2-thinking) — task is binary classification, so the
             // 20-token test budget would be eaten by reasoning tokens.
             recommendedModels: [
                 { name: 'deepseek/deepseek-v4-flash',  tier: 'recommended' },
@@ -94,7 +94,7 @@ var TidyUpProviders = (function() {
                 { match: /.*/, kind: 'plain_openai' }
             ]
         }
-        // Ollama (local) intentionally commented out in 3.0.5; default is API.
+        // Ollama (local) intentionally commented out; default flow assumes an API.
         // ollama: {
         //     displayName: 'Ollama (local)',
         //     defaultBaseUrl: 'http://localhost:11434/v1',
@@ -121,15 +121,15 @@ var TidyUpProviders = (function() {
             defaultModel: 'embed-multilingual-v3.0',
             recommendedModels: ['embed-multilingual-v3.0', 'embed-english-v3.0']
         },
-        // 3.0.6: gemini removed — text-embedding-004 deprecated; OpenAI-compatible (or Custom)
-        // covers Google embeddings via proxy.
+        // Gemini embedding removed (text-embedding-004 deprecated). Use Custom
+        // / OpenAI-compatible to reach Google embeddings via a proxy.
         custom: {
             displayName: 'Custom (OpenAI-compatible)',
             defaultBaseUrl: '',
             defaultModel: '',
             recommendedModels: []
         }
-        // ollama: { displayName: 'Ollama (local)', ... }  // commented out 3.0.5
+        // ollama: { displayName: 'Ollama (local)', ... }  // commented out — see LLM block above
     };
 
     var BUDGETS = {
