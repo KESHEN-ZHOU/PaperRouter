@@ -37,7 +37,7 @@ TidyUp = {
 
 	// Test mode config (for development)
 	testMode: {
-		enabled: true,              // Enable test mode
+		enabled: false,             // Enable test mode
 		maxCollections: 3,          // Max Collections to process
 		logApiCalls: true,          // Log API call details
 		mockApiResponses: false,    // Use mock responses (offline test)
@@ -1925,7 +1925,7 @@ Output strictly in the above format with no additional content.`;
 					provider: detectedProvider,
 					apiKey: gptApiKey,
 					model: gptModel || (detectedProvider === 'openai' ? 'text-embedding-3-small' : 'embed-multilingual-v3.0'),
-					baseUrl: gptBaseUrl || (detectedProvider === 'openai' ? 'https://bapi.huiyan-ai.cn' : 'https://api.cohere.ai/v1')
+					baseUrl: gptBaseUrl || (detectedProvider === 'openai' ? 'https://api.openai.com/v1' : 'https://api.cohere.ai/v1')
 				};
 				this.log(`Loaded embedding config from Zotero GPT: provider=${detectedProvider}, baseUrl=${gptBaseUrl || 'default'}`);
 			} else {
@@ -3501,7 +3501,7 @@ Output strictly in the above format with no additional content.`;
 	// OpenAI Embedding API
 	async getOpenAIEmbedding(text) {
 		const model = this.embeddingConfig.model || 'text-embedding-3-small';
-		let baseUrl = this.embeddingConfig.baseUrl || 'https://bapi.huiyan-ai.cn/v1';
+		let baseUrl = this.embeddingConfig.baseUrl || 'https://api.openai.com/v1';
 		
 		// Ensure URL includes /v1 path
 		if (baseUrl.indexOf('/v1') === -1) {

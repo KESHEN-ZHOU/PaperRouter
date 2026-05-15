@@ -10,4 +10,4 @@ pref("extensions.tidy-up.language", "auto");
 pref("extensions.tidy-up.embedding.provider", "");
 pref("extensions.tidy-up.embedding.apiKey", "");
 pref("extensions.tidy-up.embedding.model", "");
-pref("extensions.tidy-up.embedding.baseUrl", "https://bapi.huiyan-ai.cn/");
+pref("extensions.tidy-up.embedding.baseUrl", "https://api.openai.com/v1");

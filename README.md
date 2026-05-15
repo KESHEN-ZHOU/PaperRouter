@@ -47,7 +47,7 @@ Both sides are independent. You can configure embedding only, LLM only, or both.
 
 ## Install
 
-1. Grab `paperrouter-*.xpi` from [Releases](../../releases), or use `dist/paperrouter-0.0.1.1.xpi` from this repo.
+1. Grab `paperrouter-*.xpi` from [Releases](../../releases), or use `dist/paperrouter-0.0.2.xpi` from this repo.
 2. Zotero → Tools → Add-ons → ⚙️ → Install Add-on From File…
 3. Pick the `.xpi`, restart Zotero.
 

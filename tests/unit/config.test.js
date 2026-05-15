@@ -14,12 +14,12 @@ describe('Configuration Loading', () => {
             'extensions.tidy-up.embedding.provider': '',
             'extensions.tidy-up.embedding.apiKey': '',
             'extensions.tidy-up.embedding.model': '',
-            'extensions.tidy-up.embedding.baseUrl': 'https://bapi.huiyan-ai.cn/',
+            'extensions.tidy-up.embedding.baseUrl': 'https://api.openai.com/v1',
             'extensions.tidy-up.llm.provider': '',
             'extensions.tidy-up.llm.apiKey': '',
             'extensions.tidy-up.llm.model': '',
-            'extensions.tidy-up.llm.baseUrl': 'https://bapi.huiyan-ai.cn/v1',
-            'extensions.tidy-up.testMode.enabled': true,
+            'extensions.tidy-up.llm.baseUrl': 'https://api.openai.com/v1',
+            'extensions.tidy-up.testMode.enabled': false,
             'extensions.tidy-up.testMode.maxCollections': 3,
             'extensions.tidy-up.testMode.mockApiResponses': false
           };
@@ -73,7 +73,7 @@ describe('Configuration Loading', () => {
     
     test('should load embedding baseUrl', () => {
       const config = loadEmbeddingConfig();
-      expect(config.baseUrl).toBe('https://bapi.huiyan-ai.cn/');
+      expect(config.baseUrl).toBe('https://api.openai.com/v1');
     });
     
     test('should load embedding apiKey', () => {
@@ -103,7 +103,7 @@ describe('Configuration Loading', () => {
     
     test('should load LLM baseUrl', () => {
       const config = loadLlmConfig();
-      expect(config.baseUrl).toBe('https://bapi.huiyan-ai.cn/v1');
+      expect(config.baseUrl).toBe('https://api.openai.com/v1');
     });
     
     test('should load LLM apiKey', () => {
@@ -123,7 +123,7 @@ describe('Configuration Loading', () => {
   describe('loadTestModeConfig', () => {
     test('should load test mode enabled status', () => {
       const config = loadTestModeConfig();
-      expect(config.enabled).toBe(true);
+      expect(config.enabled).toBe(false);
     });
     
     test('should load max collections', () => {
