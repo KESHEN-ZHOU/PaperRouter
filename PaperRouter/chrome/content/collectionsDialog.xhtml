@@ -859,6 +859,7 @@
                     recommendedCount = 0;  // Reset recommendation counter
                     recommendedInternalCount = 0;
                     recommendedExternalCount = 0;
+                    allNodes = [];  // Clear stale candidates so the rebuilt tree starts fresh (buildTreeNodes appends)
                     
                     // Rebuild tree
                     buildTreeNodes(newCollections, treeContainer, 0);
