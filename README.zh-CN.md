@@ -10,7 +10,7 @@
 
 [English](./README.md) · [简体中文](./README.zh-CN.md)
 
-![PaperRouter 收藏夹对话框](assets/screenshot.png)
+![PaperRouter 演示](assets/paperrouter-demo.gif)
 
 </div>
 

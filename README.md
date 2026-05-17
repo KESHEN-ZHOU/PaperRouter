@@ -10,7 +10,7 @@ A Zotero plugin that suggests which collections a paper belongs to.
 
 [English](./README.md) · [简体中文](./README.zh-CN.md)
 
-![PaperRouter collections dialog](assets/screenshot.png)
+![PaperRouter demo](assets/paperrouter-demo.gif)
 
 </div>
 
