@@ -4,6 +4,10 @@
 
 A Zotero plugin that suggests which collections a paper belongs to.
 
+[![Stars](https://img.shields.io/github/stars/KESHEN-ZHOU/PaperRouter?style=flat-square)](https://github.com/KESHEN-ZHOU/PaperRouter/stargazers)
+[![Version](https://img.shields.io/github/v/tag/KESHEN-ZHOU/PaperRouter?label=version&style=flat-square)](https://github.com/KESHEN-ZHOU/PaperRouter/releases)
+[![License](https://img.shields.io/badge/license-MPL--2.0-blue.svg?style=flat-square)](./LICENSE)
+
 [English](./README.md) · [简体中文](./README.zh-CN.md)
 
 ![PaperRouter collections dialog](assets/screenshot.png)
@@ -11,6 +15,10 @@ A Zotero plugin that suggests which collections a paper belongs to.
 </div>
 
 ---
+
+## Why
+
+My Zotero library grew faster than I could file. Each new PDF meant a slow scroll through Collections to decide where it belongs, and half the time I just dumped it in the inbox and forgot. PaperRouter is the shortcut: right-click a paper, get a ranked shortlist of where it should go, one click to commit. It learns from what you reject so the next pass is smarter.
 
 ## What it does
 
@@ -47,7 +55,7 @@ Both sides are independent. You can configure embedding only, LLM only, or both.
 
 ## Install
 
-1. Grab `paperrouter-*.xpi` from [Releases](../../releases), or use `dist/paperrouter-0.0.2.xpi` from this repo.
+1. Grab `paperrouter-*.xpi` from [Releases](../../releases), or use `dist/paperrouter-0.2.0.xpi` from this repo.
 2. Zotero → Tools → Add-ons → ⚙️ → Install Add-on From File…
 3. Pick the `.xpi`, restart Zotero.
 
@@ -75,9 +83,19 @@ Each provider's API key and model are saved independently, so switching provider
 
 Inside the dialog:
 
-- Pre-checked rows are the collections this item already belongs to (bold red).
+- Pre-checked rows are the collections this item already belongs to (shown in bold).
 - Drag the threshold slider to hide low-confidence suggestions.
 - Click **Retry** to re-rank after blacklisting some, or **OK** to confirm.
+
+## Roadmap
+
+What's next, roughly in order of likelihood:
+
+- [ ] **Auto-mode**: when you add a new item to Zotero, route it automatically without opening the dialog (opt-in).
+- [ ] **Batch mode**: run the router across N existing items at once, not just one at a time.
+- [ ] **Per-collection exclusions**: mark a Collection as "never suggest" without blacklisting case-by-case.
+
+No timeline promises. Track via [Issues](../../issues).
 
 ## License
 

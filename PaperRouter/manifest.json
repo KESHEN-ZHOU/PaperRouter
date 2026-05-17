@@ -1,13 +1,13 @@
 {
     "manifest_version": 2,
     "name": "PaperRouter",
-    "version": "0.0.2",
+    "version": "0.2.0",
     "description": "Suggests Zotero collections for your papers via LLM or embedding similarity.",
     "homepage_url": "https://github.com/KESHEN-ZHOU/PaperRouter",
     "applications": {
         "zotero": {
             "id": "paperrouter@keshen-zhou.github.io",
-            "update_url": "https://zotero-download.s3.amazonaws.com/tmp/make-it-red/updates-2.9.1-trae.json",
+            "update_url": "https://raw.githubusercontent.com/KESHEN-ZHOU/PaperRouter/main/updates.json",
             "strict_min_version": "7.0",
             "strict_max_version": "9.*"
         }

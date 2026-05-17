@@ -2590,7 +2590,7 @@ Output strictly in the above format with no additional content.`;
 			}
 			
 			if (node.children && node.children.length > 0) {
-				this.calculateTreeSimilarity(node.children, itemName, blacklist);
+				await this.calculateTreeSimilarity(node.children, itemName, blacklist);
 			}
 		}
 	},

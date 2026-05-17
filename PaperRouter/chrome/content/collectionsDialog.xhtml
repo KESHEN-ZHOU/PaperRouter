@@ -61,8 +61,9 @@
         var recommendedInternalCount = 0;  // Currently recommended internal-type Collection count
         var recommendedExternalCount = 0;  // Currently recommended external-type Collection count
         var allNodes = [];  // Store all nodes for diversity control
-        
-        function onLoad() {
+        var diversityRunning = false;  // True while initial/retry diversity pass is running; pauses user-driven threshold changes to avoid races
+
+        async function onLoad() {
             document.documentElement.setAttribute('title', _s('dialog-title'));
             var setVal = function(id, key) { var e = document.getElementById(id); if (e) e.setAttribute('value', _s(key)); };
             var setLbl = function(id, key) { var e = document.getElementById(id); if (e) e.setAttribute('label', _s(key)); };
@@ -147,10 +148,15 @@
             
             // Apply threshold
             applyThreshold();
-            
+
             // Apply diversity control (priority 2: multi-label classification diversity)
-            applyDiversityControl();
-            
+            diversityRunning = true;
+            try {
+                await applyDiversityControl();
+            } finally {
+                diversityRunning = false;
+            }
+
             // Update Tips message (after DOM is fully loaded)
             updateTipsMessage();
         }
@@ -568,6 +574,7 @@
         }
         
         function applyThreshold() {
+            if (diversityRunning) return;  // Skip user slider changes while diversity pass is overwriting state
             var thresholdInput = document.getElementById('threshold-input');
             var threshold = parseFloat(thresholdInput.value);
             
@@ -850,6 +857,8 @@
                     nodeIdCounter = 0;  // Reset counter
                     highlightedNodes = [];  // Reset highlight list
                     recommendedCount = 0;  // Reset recommendation counter
+                    recommendedInternalCount = 0;
+                    recommendedExternalCount = 0;
                     
                     // Rebuild tree
                     buildTreeNodes(newCollections, treeContainer, 0);
@@ -871,6 +880,14 @@
                     
                     // Apply threshold
                     applyThreshold();
+
+                    // Re-run diversity control so recommendations reflect the new tree
+                    diversityRunning = true;
+                    try {
+                        await applyDiversityControl();
+                    } finally {
+                        diversityRunning = false;
+                    }
                 }
             } catch (e) {
                 // Show error
@@ -915,9 +932,18 @@
             var checkboxes = document.querySelectorAll('#tree-container checkbox');
             for (var i = 0; i < checkboxes.length; i++) {
                 var checkbox = checkboxes[i];
-                var isBlacklistedNow = checkbox.getAttribute('data-blacklisted') === 'true';
-                if (!isBlacklistedNow) {
+                if (checkbox.getAttribute('data-blacklisted') === 'true') {
+                    continue;
+                }
+                var collectionId = parseInt(checkbox.getAttribute('data-collection-id'), 10);
+                if (isExistingCollection(collectionId)) {
                     checkbox.checked = true;
+                    continue;
+                }
+                if (canSelectCollection(collectionId)) {
+                    checkbox.checked = true;
+                } else {
+                    checkbox.checked = false;
                 }
             }
             autoExpandCollapseTrees();

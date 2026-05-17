@@ -4,6 +4,10 @@
 
 一个帮 Zotero 论文找收藏夹的插件。
 
+[![Stars](https://img.shields.io/github/stars/KESHEN-ZHOU/PaperRouter?style=flat-square)](https://github.com/KESHEN-ZHOU/PaperRouter/stargazers)
+[![Version](https://img.shields.io/github/v/tag/KESHEN-ZHOU/PaperRouter?label=version&style=flat-square)](https://github.com/KESHEN-ZHOU/PaperRouter/releases)
+[![License](https://img.shields.io/badge/license-MPL--2.0-blue.svg?style=flat-square)](./LICENSE)
+
 [English](./README.md) · [简体中文](./README.zh-CN.md)
 
 ![PaperRouter 收藏夹对话框](assets/screenshot.png)
@@ -11,6 +15,10 @@
 </div>
 
 ---
+
+## 为什么做这个
+
+我的 Zotero 文献库长得比我归档速度快。每来一篇 PDF 都要在 Collection 列表里滚来滚去决定放哪，一半时候干脆扔进 inbox 就忘了。PaperRouter 就是那个 shortcut：右键一篇文章，给你一个排好序的归类建议，一键归档。你拒绝什么它记下来，下一次更准。
 
 ## 是什么
 
@@ -47,7 +55,7 @@
 
 ## 安装
 
-1. 从 [Releases](../../releases) 下载最新 `paperrouter-*.xpi`，或直接用本仓库的 `dist/paperrouter-0.0.2.xpi`。
+1. 从 [Releases](../../releases) 下载最新 `paperrouter-*.xpi`，或直接用本仓库的 `dist/paperrouter-0.2.0.xpi`。
 2. Zotero → 工具 → 插件 → ⚙️ → 从文件安装插件…
 3. 选 `.xpi`，重启 Zotero。
 
@@ -75,9 +83,19 @@ npm test
 
 对话框里：
 
-- 预先勾选的是该条目已归属的收藏夹（粗体红色）。
+- 预先勾选的是该条目已归属的收藏夹（加粗显示）。
 - 拖**阈值滑块**过滤低置信度推荐。
 - 点 **Retry** 让模型带着新反馈重新排序，点 **OK** 确认归类。
+
+## Roadmap
+
+下一步大概会做的（顺序非承诺）：
+
+- [ ] **Auto-mode**：可选开关，添加新文献到 Zotero 时自动归类，无需打开对话框。
+- [ ] **批量模式**：一次跑 N 篇文献，不只是一篇一篇。
+- [ ] **整 Collection 排除**：把某个 Collection 标为「永不建议」，不用每次手动拉黑。
+
+进度看 [Issues](../../issues)。
 
 ## 许可证
 

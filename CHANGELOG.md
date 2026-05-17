@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.0 — 2026-05-17
+
+First polished release. UI refinements, infrastructure work, and the start of auto-update support.
+
+### New
+
+- **Auto-update channel.** Zotero now checks for new versions automatically. Future releases install in-place from the Add-ons panel without re-downloading the xpi manually.
+
+### Improved
+
+- Suggestion dialog: tighter selection behavior, more predictable timing during the initial recommendation pass.
+- README: project rationale, version/license badges, public roadmap.
+
+### Internal
+
+- Test suite runs on every pull request via GitHub Actions.
+
+See [README → Roadmap](README.md#roadmap) for what is planned next.
+
 ## 0.0.2 — 2026-05-16
 
 Pre-release audit fixes. **Upgrade from 0.0.1.x.**
