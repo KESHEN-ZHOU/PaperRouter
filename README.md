@@ -10,7 +10,24 @@ A Zotero plugin that suggests which collections a paper belongs to.
 
 [English](./README.md) · [简体中文](./README.zh-CN.md)
 
-![PaperRouter demo](assets/paperrouter-demo.gif)
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screenshot.png" alt="Right-click suggestions" />
+      <br/>
+      <b>Right-click a paper</b>
+      <br/>
+      <sub>Ranked, confidence-scored collections</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/paperrouter-demo.gif" alt="Settings panel" />
+      <br/>
+      <b>One-time setup</b>
+      <br/>
+      <sub>OpenAI, Anthropic, Gemini, or any compatible endpoint</sub>
+    </td>
+  </tr>
+</table>
 
 </div>
 

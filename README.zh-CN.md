@@ -10,7 +10,24 @@
 
 [English](./README.md) · [简体中文](./README.zh-CN.md)
 
-![PaperRouter 演示](assets/paperrouter-demo.gif)
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screenshot.png" alt="右键建议" />
+      <br/>
+      <b>右键一篇论文</b>
+      <br/>
+      <sub>按置信度排序的收藏夹推荐</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/paperrouter-demo.gif" alt="设置面板" />
+      <br/>
+      <b>一次性配置</b>
+      <br/>
+      <sub>OpenAI、Anthropic、Gemini，或任何兼容端点</sub>
+    </td>
+  </tr>
+</table>
 
 </div>
 
