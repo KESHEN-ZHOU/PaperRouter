@@ -3108,6 +3108,12 @@ Output strictly in the above format with no additional content.`;
 					var selectedItems = ZoteroPane.getSelectedItems();
 					if (selectedItems && selectedItems.length > 0) {
 						selectedItem = selectedItems[0];
+						// Child attachments/notes (PDF, Snapshot) carry no title/abstract and
+						// cannot belong to a collection (FK fki_collectionItems_itemID_parentItemID).
+						// Resolve to the top-level item so we classify and file the paper, not the file.
+						if (selectedItem.topLevelItem) {
+							selectedItem = selectedItem.topLevelItem;
+						}
 						selectedItemName = selectedItem.getDisplayTitle() || selectedItem.getField('title') || 'Untitled';
 					}
 				}
@@ -3229,6 +3235,11 @@ Output strictly in the above format with no additional content.`;
 
 	// Reset Item's Collections to user-selected ones
 	async sendItemToCollections(item, collections) {
+		// Defense in depth: only top-level items can be filed into collections.
+		// If a child attachment/note slips through, file its parent paper instead.
+		if (item && item.topLevelItem) {
+			item = item.topLevelItem;
+		}
 		this.log(`sendItemToCollections: Resetting item "${item.getDisplayTitle()}" to ${collections.length} collections`);
 		
 		try {
