@@ -72,7 +72,7 @@
 
 ## 安装
 
-1. 从 [Releases](../../releases) 下载最新 `paperrouter-*.xpi`，或直接用本仓库的 `dist/paperrouter-0.2.0.xpi`。
+1. 从 [Releases](../../releases) 下载最新 `paperrouter-*.xpi`，或直接用本仓库的 `dist/paperrouter-0.2.1.xpi`。
 2. Zotero → 工具 → 插件 → ⚙️ → 从文件安装插件…
 3. 选 `.xpi`，重启 Zotero。
 

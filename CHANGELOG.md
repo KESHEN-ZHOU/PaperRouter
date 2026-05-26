@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 — 2026-05-26
+
+Bug fix.
+
+### Fixed
+
+- **Classifying a sub-item now works.** Selecting a child attachment (Preprint PDF, Snapshot) or note and clicking classify used to give inaccurate suggestions and fail with a foreign-key error (child items can't belong to a collection). The selection now resolves to its top-level paper before classifying and filing, so clicking a sub-item behaves the same as clicking the item itself.
+
 ## 0.2.0 — 2026-05-17
 
 First polished release. UI refinements, infrastructure work, and the start of auto-update support.

@@ -1,6 +1,6 @@
 {
   "name": "paperrouter",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Zotero plugin that suggests collections for your papers via LLM or embedding similarity.",
   "homepage": "https://github.com/KESHEN-ZHOU/PaperRouter",
   "repository": {
